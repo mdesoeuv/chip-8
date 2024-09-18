@@ -31,20 +31,42 @@ impl Machine {
         }
     }
 
+    /// Get register X
+    /// # Panic
+    /// Panics if x isn't in range [0x0, 0xF]
     fn register(&self, x: Register) -> u8 {
         self.registers[x as usize]
     }
 
+    /// Get mutable reference to register X
+    /// # Panic
+    /// Panics if x isn't in range [0x0, 0xF]
     fn register_mut(&mut self, x: Register) -> &mut u8 {
         &mut self.registers[x as usize]
     }
 
+    /// Get 4 nibbles at an address
+    /// # Panic
+    /// Panics `addr` or `addr + 1` are out of [Machine::memory] range
     fn nibbles_at(&self, addr: Address) -> [u8; 4] {
         let a = self.memory[addr as usize];
         let b = self.memory[addr as usize + 1];
         [a & 0xf, a >> 4, b & 0xf, b >> 4]
     }
 
+    /// Get value at address `addr` or 0 if out of [Machine::memory] range
+    fn store(&mut self, addr: Address, value: u8) {
+        if let Some(cell) = self.memory.get_mut(addr as usize) {
+            *cell = value;
+        }
+    }
+
+    /// Store value at address `addr` if in memory range
+    fn load(&self, addr: Address) -> u8 {
+        self.memory.get(addr as usize).copied().unwrap_or(0)
+    }
+
+    /// Run current instruction without updating [Machine::ip_register]
     fn tick(&mut self) {
         match self.nibbles_at(self.ip_register) {
             [0, 0, 0xe, 0] => self.clear_screen(),
@@ -288,13 +310,19 @@ impl Machine {
     /// FX55: Store the values of registers V0 to VX inclusive in memory starting at address I
     /// I is set to I + X + 1 after operation
     fn store_registers(&mut self, x: Register) {
-        unimplemented!()
+        for i in 0..=x {
+            self.store(self.i_register, self.register(i));
+            self.i_register += 1;
+        }
     }
 
     /// FX65: Fill registers V0 to VX inclusive with the values stored in memory starting at address I
     /// I is set to I + X + 1 after operation
     fn load_registers(&mut self, x: Register) {
-        unimplemented!()
+        for i in 0..=x {
+            *self.register_mut(i) = self.load(self.i_register);
+            self.i_register += 1;
+        }
     }
 }
 
