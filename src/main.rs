@@ -1,8 +1,10 @@
 struct Machine {
-    registers: [u8;16],
+    registers: [u8; 16],
     i_register: Address,
     ip_register: Address,
     memory: [u8; 4096],
+    delay_timer: u8,
+    sound_timer: u8,
 }
 
 type Address = u16;
@@ -18,13 +20,14 @@ fn u16_from_nibbles(a: u8, b: u8, c: u8) -> u16 {
 }
 
 impl Machine {
-
     fn new() -> Self {
-        Machine{
-            registers: [0;16],
+        Machine {
+            registers: [0; 16],
             i_register: 0,
             ip_register: 0,
-            memory: [0;4096],
+            memory: [0; 4096],
+            delay_timer: 0,
+            sound_timer: 0,
         }
     }
 
@@ -36,7 +39,7 @@ impl Machine {
         &mut self.registers[x as usize]
     }
 
-    fn nibbles_at(&self, addr: Address) -> [u8;4] {
+    fn nibbles_at(&self, addr: Address) -> [u8; 4] {
         let a = self.memory[addr as usize];
         let b = self.memory[addr as usize + 1];
         [a & 0xf, a >> 4, b & 0xf, b >> 4]
@@ -79,7 +82,7 @@ impl Machine {
             [0xf, x, 3, 3] => self.store_binary_coded(x),
             [0xf, x, 5, 5] => self.store_registers(x),
             [0xf, x, 6, 5] => self.load_registers(x),
-            _ => unimplemented!()
+            _ => unimplemented!(),
         }
     }
 
@@ -163,7 +166,7 @@ impl Machine {
         *self.register_mut(x) ^= self.register(y);
     }
 
-    /// 8XY4: Add the value of register VY to register VX 
+    /// 8XY4: Add the value of register VY to register VX
     /// Set VF to 01 if a carry occurs
     /// Set VF to 00 if a carry does not occur
     fn add_register(&mut self, x: Register, y: Register) {
@@ -182,7 +185,7 @@ impl Machine {
     }
 
     /// 8XY6: Store the value of register VY shifted right one bit in register VX
-    /// Set register VF to the least significant bit prior to the shift 
+    /// Set register VF to the least significant bit prior to the shift
     /// VY is unchanged
     fn shift_right(&mut self, x: Register, y: Register) {
         *self.register_mut(0xF) = self.register(y) & 1;
@@ -247,7 +250,7 @@ impl Machine {
 
     /// FX07: Store the current value of the delay timer in register VX
     fn store_delay_timer(&mut self, x: Register) {
-        unimplemented!()
+        *self.register_mut(x) = self.delay_timer;
     }
 
     /// FX0A: Wait for a keypress and store the result in register VX
@@ -257,12 +260,12 @@ impl Machine {
 
     /// FX15: Set the delay timer to the value of register VX
     fn set_delay_timer(&mut self, x: Register) {
-        unimplemented!()
+        self.delay_timer = self.register(x);
     }
 
     /// FX18: Set the sound timer to the value of register VX
     fn set_sound_timer(&mut self, x: Register) {
-        unimplemented!()
+        self.sound_timer = self.register(x)
     }
 
     /// FX1E: Add the value stored in register VX to register I
@@ -287,7 +290,7 @@ impl Machine {
     fn store_registers(&mut self, x: Register) {
         unimplemented!()
     }
-    
+
     /// FX65: Fill registers V0 to VX inclusive with the values stored in memory starting at address I
     /// I is set to I + X + 1 after operation
     fn load_registers(&mut self, x: Register) {
