@@ -139,5 +139,5 @@ impl Machine {
 
 fn main() {
     let mut machine = Machine::new();
-    machine.tick();
+    machine.run();
 }
