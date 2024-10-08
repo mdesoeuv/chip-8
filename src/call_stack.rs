@@ -5,6 +5,7 @@ pub struct CallStack {
     top: usize,
 }
 
+#[derive(Debug)]
 pub enum Error {
     Overflow,
     Underflow,
