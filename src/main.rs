@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use call_stack::CallStack;
 
 mod call_stack;
@@ -54,7 +56,7 @@ fn u16_from_nibbles(a: u8, b: u8, c: u8) -> u16 {
 }
 
 impl Machine {
-    fn new() -> Self {
+    pub fn new() -> Self {
         Machine {
             registers: [0; 16],
             i_register: 0,
@@ -66,7 +68,16 @@ impl Machine {
         }
     }
 
-    fn run(&mut self) -> RunResult {
+    pub fn load_program(&mut self, program: &[u8]) -> Result<(), ()> {
+        let program_memory = &mut self.memory[PROGRAM_ENTRYPOINT as usize..];
+        if program_memory.len() < program.len() {
+            return Err(());
+        }
+        program_memory[..program.len()].copy_from_slice(program);
+        Ok(())
+    }
+
+    pub fn run(&mut self) -> RunResult {
         loop {
             match self.tick()? {
                 TickFlow::Advance => self.ip_register += INSTRUCTION_SIZE,
@@ -155,10 +166,25 @@ impl Machine {
     }
 }
 
-fn main() {
+use clap::Parser;
+
+#[derive(Parser)]
+struct CLA {
+    program: PathBuf,
+}
+
+fn main() -> Result<(), Box<dyn core::error::Error>> {
+    let args = CLA::parse();
+
+    let bytecode = std::fs::read(&args.program)?;
+
     let mut machine = Machine::new();
+    machine
+        .load_program(&bytecode)
+        .map_err(|()| "could not load program")?;
     match machine.run() {
         Ok(_) => todo!(),
         Err(err) => eprintln!("Error: {err:?}"),
     }
+    Ok(())
 }
