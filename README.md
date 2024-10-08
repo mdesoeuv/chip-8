@@ -22,4 +22,5 @@ or build and run release at the same time : `cargo run -r`
 ### References
 
 - https://github.com/mattmikolay/chip-8/wiki/Mastering-CHIP%E2%80%908
-
+- instruction set : https://github.com/mattmikolay/chip-8/wiki/CHIP%E2%80%908-Instruction-Set
+- technical reference : https://github.com/mattmikolay/chip-8/wiki/CHIP%E2%80%908-Technical-Reference 
