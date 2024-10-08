@@ -3,7 +3,10 @@ use crate::{Address, Machine, Register, TickFlow};
 impl Machine {
     /// 2NNN: Execute subroutine starting at address NNN
     pub fn execute_subroutine(&mut self, addr: Address) -> TickFlow {
-        TickFlow::Unimplemented
+        match self.call_stack.push(self.ip_register) {
+            Ok(()) => TickFlow::GoTo(addr),
+            Err(stack_error) => stack_error.into(),
+        }
     }
 
     /// 00E0: Clear the screen

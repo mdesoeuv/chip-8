@@ -1,3 +1,6 @@
+use call_stack::CallStack;
+
+mod call_stack;
 mod instruction;
 
 struct Machine {
@@ -7,6 +10,7 @@ struct Machine {
     memory: [u8; 4096],
     delay_timer: u8,
     sound_timer: u8,
+    call_stack: CallStack,
 }
 
 enum TickFlow {
@@ -15,10 +19,18 @@ enum TickFlow {
     GoTo(Address),
     Wait,
     Unimplemented,
+    StackError(call_stack::Error),
+}
+
+impl From<call_stack::Error> for TickFlow {
+    fn from(value: call_stack::Error) -> Self {
+        Self::StackError(value)
+    }
 }
 
 enum RunFlow {
     Wait,
+    StackError(call_stack::Error),
     Unimplemented,
 }
 
@@ -44,6 +56,7 @@ impl Machine {
             memory: [0; 4096],
             delay_timer: 0,
             sound_timer: 0,
+            call_stack: CallStack::new(),
         }
     }
 
@@ -55,6 +68,7 @@ impl Machine {
                 TickFlow::GoTo(addr) => self.ip_register = addr,
                 TickFlow::Wait => return RunFlow::Wait,
                 TickFlow::Unimplemented => return RunFlow::Unimplemented,
+                TickFlow::StackError(error) => return RunFlow::StackError(error),
             }
         }
     }
