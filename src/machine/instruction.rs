@@ -1,4 +1,4 @@
-use crate::{Address, Machine, Register, TickError, TickFlow, TickResult};
+use super::{Address, Machine, Register, TickError, TickFlow, TickResult};
 
 impl Machine {
     /// 2NNN: Execute subroutine starting at address NNN
