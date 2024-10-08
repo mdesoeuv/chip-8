@@ -1,4 +1,4 @@
-use crate::Address;
+use super::Address;
 
 pub struct CallStack {
     stack: [Address; 12],
