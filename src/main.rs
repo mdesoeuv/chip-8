@@ -1,3 +1,6 @@
+use call_stack::CallStack;
+
+mod call_stack;
 mod instruction;
 
 struct Machine {
@@ -7,19 +10,34 @@ struct Machine {
     memory: [u8; 4096],
     delay_timer: u8,
     sound_timer: u8,
+    call_stack: CallStack,
 }
+
+type TickResult = Result<TickFlow, TickError>;
 
 enum TickFlow {
     Advance,
     Skip,
     GoTo(Address),
     Wait,
+}
+
+#[derive(Debug)]
+enum TickError {
+    StackError(call_stack::Error),
     Unimplemented,
 }
 
+impl From<call_stack::Error> for TickError {
+    fn from(value: call_stack::Error) -> Self {
+        Self::StackError(value)
+    }
+}
+
+type RunResult = Result<RunFlow, TickError>;
+
 enum RunFlow {
     Wait,
-    Unimplemented,
 }
 
 type Address = u16;
@@ -44,17 +62,17 @@ impl Machine {
             memory: [0; 4096],
             delay_timer: 0,
             sound_timer: 0,
+            call_stack: CallStack::new(),
         }
     }
 
-    fn run(&mut self) -> RunFlow {
+    fn run(&mut self) -> RunResult {
         loop {
-            match self.tick() {
+            match self.tick()? {
                 TickFlow::Advance => self.ip_register += INSTRUCTION_SIZE,
                 TickFlow::Skip => self.ip_register += INSTRUCTION_SIZE * 2,
                 TickFlow::GoTo(addr) => self.ip_register = addr,
-                TickFlow::Wait => return RunFlow::Wait,
-                TickFlow::Unimplemented => return RunFlow::Unimplemented,
+                TickFlow::Wait => return Ok(RunFlow::Wait),
             }
         }
     }
@@ -95,7 +113,7 @@ impl Machine {
     }
 
     /// Run current instruction without updating [Machine::ip_register]
-    fn tick(&mut self) -> TickFlow {
+    fn tick(&mut self) -> TickResult {
         match self.nibbles_at(self.ip_register) {
             [0, 0, 0xe, 0] => self.clear_screen(),
             [0, 0, 0xe, 0xe] => self.return_from_subroutine(),
@@ -132,12 +150,15 @@ impl Machine {
             [0xf, x, 3, 3] => self.store_binary_coded(x),
             [0xf, x, 5, 5] => self.store_registers(x),
             [0xf, x, 6, 5] => self.load_registers(x),
-            _ => TickFlow::Unimplemented,
+            _ => Err(TickError::Unimplemented),
         }
     }
 }
 
 fn main() {
     let mut machine = Machine::new();
-    machine.run();
+    match machine.run() {
+        Ok(_) => todo!(),
+        Err(err) => eprintln!("Error: {err:?}"),
+    }
 }
