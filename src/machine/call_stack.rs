@@ -1,3 +1,5 @@
+use thiserror::Error;
+
 use super::Address;
 
 pub struct CallStack {
@@ -5,9 +7,12 @@ pub struct CallStack {
     top: usize,
 }
 
-#[derive(Debug)]
+
+#[derive(Error, Debug)]
 pub enum Error {
+    #[error("overflow")]
     Overflow,
+    #[error("underflow")]
     Underflow,
 }
 

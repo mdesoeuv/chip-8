@@ -37,9 +37,7 @@ fn main() -> Result<(), Box<dyn core::error::Error>> {
     let bytecode = std::fs::read(&args.program)?;
 
     let mut machine = Machine::new();
-    machine
-        .load_program(&bytecode)
-        .map_err(|()| "could not load program")?;
+    machine.load_program(&bytecode)?;
 
     iced::application("chip-8", App::update, App::view)
         .centered()
