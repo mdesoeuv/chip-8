@@ -1,15 +1,19 @@
-mod screen;
 mod call_stack;
 mod instruction;
+mod memory;
+mod screen;
 
-pub use screen::Screen;
+use thiserror::Error;
+
 use call_stack::CallStack;
+pub use memory::{Address, Memory};
+pub use screen::Screen;
 
 pub struct Machine {
     pub registers: [u8; 16],
     pub i_register: Address,
     pub ip_register: Address,
-    pub memory: [u8; 4096],
+    pub memory: Memory,
     pub delay_timer: u8,
     pub sound_timer: u8,
     pub call_stack: CallStack,
@@ -25,16 +29,16 @@ pub enum TickFlow {
     Wait,
 }
 
-#[derive(Debug)]
+#[derive(Error, Debug)]
 pub enum TickError {
-    StackError(call_stack::Error),
+    #[error(transparent)]
+    StackError(#[from] call_stack::Error),
+    #[error(transparent)]
+    MemoryError(#[from] memory::Error),
+    #[error("unimplemented instruction")]
     Unimplemented,
-}
-
-impl From<call_stack::Error> for TickError {
-    fn from(value: call_stack::Error) -> Self {
-        Self::StackError(value)
-    }
+    #[error("unknown instruction")]
+    Unknown,
 }
 
 pub type RunResult = Result<RunFlow, TickError>;
@@ -43,13 +47,9 @@ pub enum RunFlow {
     Wait,
 }
 
-pub type Address = u16;
-
 pub type Register = u8;
 
 pub const INSTRUCTION_SIZE: Address = 2;
-
-pub const PROGRAM_ENTRYPOINT: Address = 0x200;
 
 pub fn u8_from_nibbles(a: u8, b: u8) -> u8 {
     a << 4 & b
@@ -64,8 +64,8 @@ impl Machine {
         Machine {
             registers: [0; 16],
             i_register: 0,
-            ip_register: PROGRAM_ENTRYPOINT,
-            memory: [0; 4096],
+            ip_register: Memory::PROGRAM_ENTRYPOINT,
+            memory: Memory::default(),
             delay_timer: 0,
             sound_timer: 0,
             call_stack: CallStack::new(),
@@ -73,13 +73,8 @@ impl Machine {
         }
     }
 
-    pub fn load_program(&mut self, program: &[u8]) -> Result<(), ()> {
-        let program_memory = &mut self.memory[PROGRAM_ENTRYPOINT as usize..];
-        if program_memory.len() < program.len() {
-            return Err(());
-        }
-        program_memory[..program.len()].copy_from_slice(program);
-        Ok(())
+    pub fn load_program(&mut self, program: &[u8]) -> Result<(), memory::Error> {
+        self.memory.load_program(program)
     }
 
     pub fn run(&mut self) -> RunResult {
@@ -107,30 +102,9 @@ impl Machine {
         &mut self.registers[x as usize]
     }
 
-    /// Get 4 nibbles at an address
-    /// # Panic
-    /// Panics `addr` or `addr + 1` are out of [Machine::memory] range
-    pub fn nibbles_at(&self, addr: Address) -> [u8; 4] {
-        let a = self.memory[addr as usize];
-        let b = self.memory[addr as usize + 1];
-        [a & 0xf, a >> 4, b & 0xf, b >> 4]
-    }
-
-    /// Get value at address `addr` or 0 if out of [Machine::memory] range
-    pub fn store(&mut self, addr: Address, value: u8) {
-        if let Some(cell) = self.memory.get_mut(addr as usize) {
-            *cell = value;
-        }
-    }
-
-    /// Store value at address `addr` if in memory range
-    pub fn load(&self, addr: Address) -> u8 {
-        self.memory.get(addr as usize).copied().unwrap_or(0)
-    }
-
     /// Run current instruction without updating [Machine::ip_register]
     pub fn tick(&mut self) -> TickResult {
-        match self.nibbles_at(self.ip_register) {
+        match self.memory.nibbles_at(self.ip_register)? {
             [0, 0, 0xe, 0] => self.clear_screen(),
             [0, 0, 0xe, 0xe] => self.return_from_subroutine(),
             [0, a, b, c] => self.jump_to_machine_code(u16_from_nibbles(a, b, c)),
@@ -166,8 +140,7 @@ impl Machine {
             [0xf, x, 3, 3] => self.store_binary_coded(x),
             [0xf, x, 5, 5] => self.store_registers(x),
             [0xf, x, 6, 5] => self.load_registers(x),
-            _ => Err(TickError::Unimplemented),
+            _ => Err(TickError::Unknown),
         }
     }
 }
-

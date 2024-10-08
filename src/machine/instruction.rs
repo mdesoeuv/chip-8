@@ -9,7 +9,8 @@ impl Machine {
 
     /// 00E0: Clear the screen
     pub fn clear_screen(&mut self) -> TickResult {
-        Err(TickError::Unimplemented)
+        self.screen.clear();
+        Ok(TickFlow::Advance)
     }
 
     /// 3XNN: Skip the following instruction if the value of register VX equals NN
@@ -168,8 +169,15 @@ impl Machine {
 
     /// DXYN: Draw a sprite at position VX, VY with N bytes of sprite data starting at the address stored in I
     /// Set VF to 01 if any set pixels are changed to unset, and 00 otherwise
-    pub fn draw_sprite(&mut self, x: Register, y: Register, value: u8) -> TickResult {
-        Err(TickError::Unimplemented)
+    pub fn draw_sprite(&mut self, x: Register, y: Register, line_count: u8) -> TickResult {
+        let x = self.register(x) as usize;
+        let y = self.register(y) as usize;
+        
+        let sprite = self.memory.range_mut(self.i_register.. self.i_register + line_count as Address)?;
+
+        self.screen.draw_sprite(x, y, sprite);
+        self.i_register += line_count as Address;
+        Ok(TickFlow::Advance)
     }
 
     /// EX9E: Skip the following instruction if the key corresponding to the hex value currently stored in register VX is pressed
@@ -227,7 +235,7 @@ impl Machine {
     /// I is set to I + X + 1 after operation
     pub fn store_registers(&mut self, x: Register) -> TickResult {
         for i in 0..=x {
-            self.store(self.i_register, self.register(i));
+            *self.memory.get_mut(self.i_register)? = self.register(i);
             self.i_register += 1;
         }
         Ok(TickFlow::Advance)
@@ -237,7 +245,7 @@ impl Machine {
     /// I is set to I + X + 1 after operation
     pub fn load_registers(&mut self, x: Register) -> TickResult {
         for i in 0..=x {
-            *self.register_mut(i) = self.load(self.i_register);
+            *self.register_mut(i) = self.memory.get(self.i_register)?;
             self.i_register += 1;
         }
         Ok(TickFlow::Advance)
