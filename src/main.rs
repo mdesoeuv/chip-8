@@ -167,10 +167,97 @@ impl Machine {
 }
 
 use clap::Parser;
+use iced::{widget::canvas, Color, Length};
 
 #[derive(Parser)]
 struct CLA {
     program: PathBuf,
+}
+
+#[derive(Default)]
+struct App {
+    screen: Screen,
+}
+
+#[derive(Debug)]
+enum Message {}
+
+struct Screen {
+    pixels: [[bool; Self::WIDTH]; Self::HEIGHT],
+}
+
+impl Default for Screen {
+    fn default() -> Self {
+        Self {
+            pixels: [[false; Self::WIDTH]; Self::HEIGHT],
+        }
+    }
+}
+
+impl Screen {
+    const WIDTH: usize = 64;
+    const HEIGHT: usize = 32;
+}
+
+impl canvas::Program<Message> for &Screen {
+    type State = ();
+
+    fn draw(
+        &self,
+        _state: &Self::State,
+        renderer: &iced::Renderer,
+        _theme: &iced::Theme,
+        bounds: iced::Rectangle,
+        _cursor: iced::mouse::Cursor,
+    ) -> Vec<canvas::Geometry<iced::Renderer>> {
+        // We prepare a new `Frame`
+        let mut frame = canvas::Frame::new(renderer, bounds.size());
+
+        frame.fill(
+            &canvas::Path::rectangle(iced::Point::ORIGIN, bounds.size()),
+            Color::BLACK,
+        );
+
+        for (y, line) in self.pixels.iter().enumerate() {
+            for (x, &pixel) in line.iter().enumerate() {
+                if pixel {
+                    frame.fill(
+                        &canvas::Path::rectangle(
+                            iced::Point {
+                                x: x as f32 * SCALE,
+                                y: y as f32 * SCALE,
+                            },
+                            iced::Size {
+                                width: SCALE,
+                                height: SCALE,
+                            },
+                        ),
+                        Color::WHITE,
+                    );
+                }
+            }
+        }
+
+        // Then, we produce the geometry
+        vec![frame.into_geometry()]
+    }
+}
+
+const SCALE: f32 = 20.0;
+const WINDOW_SIZE: iced::Size = iced::Size {
+    width: Screen::WIDTH as f32 * SCALE,
+    height: Screen::HEIGHT as f32 * SCALE,
+};
+
+impl App {
+    fn update(&mut self, message: Message) {}
+
+    fn view(&self) -> iced::Element<Message> {
+        iced::widget::canvas(&self.screen)
+            .width(iced::Length::Fixed(WINDOW_SIZE.width))
+            .height(iced::Length::Fixed(WINDOW_SIZE.height))
+            .into()
+    }
 }
 
 fn main() -> Result<(), Box<dyn core::error::Error>> {
@@ -182,9 +269,16 @@ fn main() -> Result<(), Box<dyn core::error::Error>> {
     machine
         .load_program(&bytecode)
         .map_err(|()| "could not load program")?;
-    match machine.run() {
-        Ok(_) => todo!(),
-        Err(err) => eprintln!("Error: {err:?}"),
-    }
+
+    let mut app = App::default();
+
+    app.screen.pixels[10][10] = true;
+
+    iced::application("chip-8", App::update, App::view)
+        .centered()
+        .resizable(false)
+        .window_size(WINDOW_SIZE)
+        .run_with(|| (app, iced::Task::none()))?;
+
     Ok(())
 }
