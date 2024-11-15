@@ -1,9 +1,9 @@
-use super::{Address, Machine, Register, TickError, TickFlow, TickResult};
+use super::{Address, Machine, Register, TickError, TickFlow, TickResult, INSTRUCTION_SIZE};
 
 impl Machine {
     /// 2NNN: Execute subroutine starting at address NNN
     pub fn execute_subroutine(&mut self, addr: Address) -> TickResult {
-        self.call_stack.push(self.ip_register)?;
+        self.call_stack.push(self.ip_register + INSTRUCTION_SIZE)?;
         Ok(TickFlow::GoTo(addr))
     }
 
@@ -172,8 +172,10 @@ impl Machine {
     pub fn draw_sprite(&mut self, x: Register, y: Register, line_count: u8) -> TickResult {
         let x = self.register(x) as usize;
         let y = self.register(y) as usize;
-        
-        let sprite = self.memory.range_mut(self.i_register.. self.i_register + line_count as Address)?;
+
+        let sprite = self
+            .memory
+            .range_mut(self.i_register..self.i_register + line_count as Address)?;
 
         self.screen.draw_sprite(x, y, sprite);
         self.i_register += line_count as Address;
