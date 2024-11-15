@@ -159,13 +159,13 @@ impl Machine {
     }
 
     /// BNNN: Jump to address NNN + V0
-    pub fn jump_to_offset(&mut self, reference: u16) -> TickResult {
-        Err(TickError::Unimplemented)
+    pub fn jump_to_offset(&mut self, reference: Address) -> TickResult {
+        Ok(TickFlow::GoTo(reference + self.register(0) as Address))
     }
 
     /// CNNN: Set VX to a random number with a mask of NN
     pub fn store_random(&mut self, x: Register, mask: u8) -> TickResult {
-        *self.register_mut(x) = todo!();
+        *self.register_mut(x) = rand::random::<u8>() & mask;
         Ok(TickFlow::Advance)
     }
 
@@ -186,12 +186,20 @@ impl Machine {
 
     /// EX9E: Skip the following instruction if the key corresponding to the hex value currently stored in register VX is pressed
     pub fn skip_if_key_pressed(&mut self, x: Register) -> TickResult {
-        Err(TickError::Unimplemented)
+        if self.keypad.pressed(self.register(x)) {
+            Ok(TickFlow::Skip)
+        } else {
+            Ok(TickFlow::Advance)
+        }
     }
 
     /// EXA1: Skip the following instruction if the key corresponding to the hex value currently stored in register VX is not pressed
     pub fn skip_if_key_not_pressed(&mut self, x: Register) -> TickResult {
-        Err(TickError::Unimplemented)
+        if self.keypad.pressed(self.register(x)) {
+            Ok(TickFlow::Skip)
+        } else {
+            Ok(TickFlow::Advance)
+        }
     }
 
     /// FX07: Store the current value of the delay timer in register VX
@@ -202,7 +210,11 @@ impl Machine {
 
     /// FX0A: Wait for a keypress and store the result in register VX
     pub fn wait_for_keypress(&mut self, x: Register) -> TickResult {
-        Ok(TickFlow::Wait) // TODO: Add Condition
+        match self.keypad.just_pressed() {
+            Some(key) => *self.register_mut(x) = key,
+            None => return Ok(TickFlow::Wait),
+        }
+        Ok(TickFlow::Advance)
     }
 
     /// FX15: Set the delay timer to the value of register VX

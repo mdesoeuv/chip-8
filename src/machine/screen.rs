@@ -29,7 +29,7 @@ impl Screen {
                 let Some(image_pixel) = screen_line.get_mut(x + column) else {
                     break;
                 };
-                let sprite_pixel = ((sprite_line >> column) & 1) != 0;
+                let sprite_pixel = ((sprite_line >> (u8::BITS as usize - column - 1)) & 1) != 0;
                 colision_found |= *image_pixel & sprite_pixel;
                 *image_pixel ^= sprite_pixel;
             }

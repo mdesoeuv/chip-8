@@ -2,12 +2,14 @@ mod call_stack;
 mod instruction;
 mod memory;
 mod screen;
+mod keypad;
 
 use thiserror::Error;
 
 use call_stack::CallStack;
 pub use memory::{Address, Memory};
 pub use screen::Screen;
+pub use keypad::{Keypad, Key};
 
 pub struct Machine {
     pub registers: [u8; 16],
@@ -18,6 +20,7 @@ pub struct Machine {
     pub sound_timer: u8,
     pub call_stack: CallStack,
     pub screen: Screen,
+    pub keypad: Keypad,
 }
 
 pub type TickResult = Result<TickFlow, TickError>;
@@ -70,6 +73,7 @@ impl Machine {
             sound_timer: 0,
             call_stack: CallStack::new(),
             screen: Screen::default(),
+            keypad: Keypad::default(),
         }
     }
 
@@ -78,7 +82,7 @@ impl Machine {
     }
 
     pub fn run(&mut self) -> RunResult {
-        loop {
+        for _ in 0..200 {
             match self.tick()? {
                 TickFlow::Advance => self.ip_register += INSTRUCTION_SIZE,
                 TickFlow::Skip => self.ip_register += INSTRUCTION_SIZE * 2,
@@ -86,6 +90,7 @@ impl Machine {
                 TickFlow::Wait => return Ok(RunFlow::Wait),
             }
         }
+        Ok(RunFlow::Wait)
     }
 
     /// Get register X

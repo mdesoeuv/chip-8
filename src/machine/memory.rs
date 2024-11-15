@@ -107,6 +107,6 @@ impl Memory {
     pub fn nibbles_at(&self, addr: Address) -> Result<[u8; 4], Error> {
         let a = self.get(addr)?;
         let b = self.get(addr + 1)?;
-        Ok([a & 0xf, a >> 4, b & 0xf, b >> 4])
+        Ok([a >> 4, a & 0xf, b >> 4, b & 0xf])
     }
 }
