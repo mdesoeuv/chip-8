@@ -1,4 +1,6 @@
-use super::{Address, Machine, Register, TickError, TickFlow, TickResult, INSTRUCTION_SIZE};
+use super::{
+    memory, Address, Machine, Memory, Register, TickError, TickFlow, TickResult, INSTRUCTION_SIZE,
+};
 
 impl Machine {
     /// 2NNN: Execute subroutine starting at address NNN
@@ -224,13 +226,20 @@ impl Machine {
 
     /// FX29: Set I to the memory address of the sprite data corresponding to the hexadecimal digit stored in register VX
     pub fn store_digit_location(&mut self, x: Register) -> TickResult {
-        Err(TickError::Unimplemented)
+        self.i_register = Memory::FONT_LOCATION + self.register(x) as u16 * memory::GLYPH_SIZE;
+        Ok(TickFlow::Advance)
     }
 
     /// FX33: Store the [binary-coded decimal](https://en.wikipedia.org/wiki/Binary-coded_decimal)
     /// equivalent of the value stored in register VX at addresses I, I + 1, and I + 2
     pub fn store_binary_coded(&mut self, x: Register) -> TickResult {
-        Err(TickError::Unimplemented)
+        let n = self.register(x);
+
+        *self.memory.get_mut(self.i_register)? = n / 100;
+        *self.memory.get_mut(self.i_register + 1)? = (n / 10) % 10;
+        *self.memory.get_mut(self.i_register + 2)? = n % 10;
+
+        Ok(TickFlow::Advance)
     }
 
     /// FX55: Store the values of registers V0 to VX inclusive in memory starting at address I

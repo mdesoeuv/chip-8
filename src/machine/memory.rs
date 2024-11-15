@@ -21,8 +21,8 @@ pub enum Error {
     RangeOutOfBound(Range<Address>),
 }
 
-const GLYPH_SIZE: usize = 5;
-type Glyph = [u8; GLYPH_SIZE];
+pub const GLYPH_SIZE: Address = 5;
+type Glyph = [u8; GLYPH_SIZE as usize];
 type Font = [Glyph; 16];
 
 const DEFAULT_FONT: Font = [
@@ -71,7 +71,7 @@ impl Memory {
         let glyph_locations = self
             .range_mut(Self::FONT_RANGE)
             .unwrap()
-            .chunks_exact_mut(GLYPH_SIZE);
+            .chunks_exact_mut(GLYPH_SIZE as usize);
 
         for (location, glyph) in glyph_locations.zip(font) {
             location.copy_from_slice(glyph);
