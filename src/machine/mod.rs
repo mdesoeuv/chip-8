@@ -52,11 +52,11 @@ pub type Register = u8;
 pub const INSTRUCTION_SIZE: Address = 2;
 
 pub fn u8_from_nibbles(a: u8, b: u8) -> u8 {
-    a << 4 & b
+    a << 4 | b
 }
 
 pub fn u16_from_nibbles(a: u8, b: u8, c: u8) -> u16 {
-    (a as u16) << 8 & (b as u16) << 4 & (c as u16)
+    (a as u16) << 8 | (b as u16) << 4 | (c as u16)
 }
 
 impl Machine {
