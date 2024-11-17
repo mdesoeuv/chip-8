@@ -119,7 +119,7 @@ impl Machine {
     /// VY is unchanged
     pub fn shift_right(&mut self, x: Register, y: Register) -> TickResult {
         *self.register_mut(0xF) = self.register(y) & 1;
-        *self.register_mut(x) >>= self.register(y);
+        *self.register_mut(x) = self.register(y) >> 1;
         Ok(TickFlow::Advance)
     }
 
