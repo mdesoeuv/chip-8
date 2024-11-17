@@ -120,7 +120,7 @@ impl Machine {
     pub fn shift_right(&mut self, x: Register, y: Register) -> TickResult {
         let carry = self.register(y) & 1;
         *self.register_mut(x) = self.register(y) >> 1;
-        *self.register_mut(0xF) = carry; 
+        *self.register_mut(0xF) = carry;
         Ok(TickFlow::Advance)
     }
 
@@ -183,11 +183,13 @@ impl Machine {
 
         self.screen.draw_sprite(x, y, sprite);
         self.i_register += line_count as Address;
+        self.ip_register &= 0xfff;
         Ok(TickFlow::Advance)
     }
 
     /// EX9E: Skip the following instruction if the key corresponding to the hex value currently stored in register VX is pressed
     pub fn skip_if_key_pressed(&mut self, x: Register) -> TickResult {
+        log::trace!("skip_if_key_pressed");
         if self.keypad.pressed(self.register(x)) {
             Ok(TickFlow::Skip)
         } else {
@@ -197,10 +199,11 @@ impl Machine {
 
     /// EXA1: Skip the following instruction if the key corresponding to the hex value currently stored in register VX is not pressed
     pub fn skip_if_key_not_pressed(&mut self, x: Register) -> TickResult {
+        log::trace!("skip_if_key_not_pressed");
         if self.keypad.pressed(self.register(x)) {
-            Ok(TickFlow::Skip)
-        } else {
             Ok(TickFlow::Advance)
+        } else {
+            Ok(TickFlow::Skip)
         }
     }
 
@@ -212,11 +215,15 @@ impl Machine {
 
     /// FX0A: Wait for a keypress and store the result in register VX
     pub fn wait_for_keypress(&mut self, x: Register) -> TickResult {
-        match self.keypad.just_pressed() {
-            Some(key) => *self.register_mut(x) = key,
-            None => return Ok(TickFlow::Wait),
+        log::trace!("wait_for_key_press");
+        match self.keypad.just_released() {
+            Some(key) => {
+                log::debug!("Key just released: {key}");
+                *self.register_mut(x) = key;
+                Ok(TickFlow::Advance)
+            }
+            None => Ok(TickFlow::Wait),
         }
-        Ok(TickFlow::Advance)
     }
 
     /// FX15: Set the delay timer to the value of register VX
@@ -250,8 +257,12 @@ impl Machine {
         let n = self.register(x);
 
         *self.memory.get_mut(self.i_register)? = n / 100;
-        *self.memory.get_mut(self.i_register + 1)? = (n / 10) % 10;
-        *self.memory.get_mut(self.i_register + 2)? = n % 10;
+        *self
+            .memory
+            .get_mut(self.i_register + 1)? = (n / 10) % 10;
+        *self
+            .memory
+            .get_mut(self.i_register + 2)? = n % 10;
 
         Ok(TickFlow::Advance)
     }
@@ -260,8 +271,10 @@ impl Machine {
     /// I is set to I + X + 1 after operation
     pub fn store_registers(&mut self, x: Register) -> TickResult {
         for i in 0..=x {
-            *self.memory.get_mut(self.i_register)? = self.register(i);
-            self.i_register += 1;
+            *self
+                .memory
+                .get_mut(self.i_register + i as Address)? = self.register(i);
+            // self.i_register += 1;
         }
         Ok(TickFlow::Advance)
     }
@@ -270,8 +283,8 @@ impl Machine {
     /// I is set to I + X + 1 after operation
     pub fn load_registers(&mut self, x: Register) -> TickResult {
         for i in 0..=x {
-            *self.register_mut(i) = self.memory.get(self.i_register)?;
-            self.i_register += 1;
+            *self.register_mut(i) = self.memory.get(self.i_register + i as Address)?;
+            // self.i_register += 1;
         }
         Ok(TickFlow::Advance)
     }

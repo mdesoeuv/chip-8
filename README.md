@@ -19,6 +19,9 @@ cargo build --release
 
 or build and run release at the same time : `cargo run -r`
 
+### Log
+Run 
+
 ### References
 
 - https://github.com/mattmikolay/chip-8/wiki/Mastering-CHIP%E2%80%908
