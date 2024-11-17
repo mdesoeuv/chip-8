@@ -110,7 +110,7 @@ impl Machine {
     pub fn sub_register(&mut self, x: Register, y: Register) -> TickResult {
         let (result, overflowed) = self.register(x).overflowing_sub(self.register(y));
         *self.register_mut(x) = result;
-        *self.register_mut(0xF) = u8::from(overflowed);
+        *self.register_mut(0xF) = u8::from(!overflowed);
         Ok(TickFlow::Advance)
     }
 
@@ -118,8 +118,9 @@ impl Machine {
     /// Set register VF to the least significant bit prior to the shift
     /// VY is unchanged
     pub fn shift_right(&mut self, x: Register, y: Register) -> TickResult {
-        *self.register_mut(0xF) = self.register(y) & 1;
+        let carry = self.register(y) & 1;
         *self.register_mut(x) = self.register(y) >> 1;
+        *self.register_mut(0xF) = carry; 
         Ok(TickFlow::Advance)
     }
 
@@ -129,7 +130,7 @@ impl Machine {
     pub fn sub_register_reverse(&mut self, x: Register, y: Register) -> TickResult {
         let (result, overflowed) = self.register(y).overflowing_sub(self.register(x));
         *self.register_mut(x) = result;
-        *self.register_mut(0xF) = u8::from(overflowed);
+        *self.register_mut(0xF) = u8::from(!overflowed);
         Ok(TickFlow::Advance)
     }
 
@@ -137,9 +138,10 @@ impl Machine {
     /// Set register VF to the most significant bit prior to the shift
     /// VY is unchanged
     pub fn shift_left(&mut self, x: Register, y: Register) -> TickResult {
-        let msb = self.register(y) & 0b_1000_0000;
+        // Remove all 7 less significant bits, leaving 8th at least significant position
+        let carry = self.register(y) >> 7;
         *self.register_mut(x) = self.register(y) << 1;
-        *self.register_mut(0xF) = msb;
+        *self.register_mut(0xF) = carry;
         Ok(TickFlow::Advance)
     }
 
