@@ -20,7 +20,28 @@ cargo build --release
 or build and run release at the same time : `cargo run -r`
 
 ### Log
-Run 
+
+Run the executable with the environment variable `RUST_LOG` set to a log level among:
+- trace
+- debug
+- info
+- warning
+- error
+
+example:
+
+```sh
+$ RUST_LOG="debug" cargo run
+```
+
+But you will get the logs from every carte that uses `log` crate.
+
+To get a more specific log you can set log filters per crate,
+Here our crate name is `chip_8` and **not** `chip-8`, which means we need to run:
+
+```bash
+$ RUST_LOG="chip_8=debug" cargo run
+```
 
 ### References
 

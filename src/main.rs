@@ -60,6 +60,7 @@ impl App {
             Message::Render(_) => {
                 self.machine.delay_timer = self.machine.delay_timer.saturating_sub(1);
                 self.machine.sound_timer = self.machine.sound_timer.saturating_sub(1);
+
                 if self.machine.sound_timer > 0 {
                     self.audio_sink.play();
                 } else {
@@ -77,15 +78,19 @@ impl App {
     }
 
     fn view(&self) -> iced::Element<Message> {
-        iced::widget::canvas(&self.machine.screen)
-            .width(iced::Length::Fixed(WINDOW_SIZE.width))
-            .height(iced::Length::Fixed(WINDOW_SIZE.height))
-            .into()
+        // iced::widget::canvas(&self.machine.screen)
+        //     .width(iced::Length::Fixed(WINDOW_SIZE.width))
+        //     .height(iced::Length::Fixed(WINDOW_SIZE.height))
+        //     .into()
+        iced::Element::new(
+            &self.machine.screen
+        )
     }
 
     fn subscription(&self) -> iced::Subscription<Message> {
-        let frame_delay = iced::time::Duration::from_secs(1) / FRAME_RATE;
-        let frames = iced::time::every(frame_delay).map(Message::Render);
+        // let frame_delay = iced::time::Duration::from_secs(1) / FRAME_RATE;
+        // let frames = iced::time::every(frame_delay).map(Message::Render);
+        let frames = iced::window::frames().map(Message::Render);
 
         let key_pressed = iced::keyboard::on_key_press(|key, _modifier| match key {
             Key::Character(c) => Some(Message::KeyPressed(keymap(c.as_str())?)),
@@ -113,6 +118,7 @@ fn main() -> Result<(), Box<dyn core::error::Error>> {
     // Add a dummy source of the sake of the example.
     let source = SineWave::new(440.0).amplify(0.20);
     audio_sink.append(source);
+    audio_sink.pause();
 
     let args = CLA::parse();
 
@@ -121,9 +127,9 @@ fn main() -> Result<(), Box<dyn core::error::Error>> {
     let mut machine = Machine::new();
     machine.load_program(&bytecode)?;
 
+
     iced::application("chip-8", App::update, App::view)
         .centered()
-        .resizable(false)
         .window_size(WINDOW_SIZE)
         .subscription(App::subscription)
         .run_with(|| (App { machine, _stream, audio_sink }, iced::Task::none()))?;

@@ -6,8 +6,11 @@ edition = "2021"
 [dependencies]
 clap = { version = "4.5.19", features = ["derive"] }
 env_logger = "0.11.5"
-iced = { version = "0.13.1", features = ["canvas", "tokio"] }
+iced = { version = "0.13.1", features = ["advanced", "canvas", "tokio"] }
 log = "0.4.22"
 rand = "0.8.5"
 rodio = "0.20.1"
 thiserror = "1.0.64"
+
+[profile.release]
+debug=true
