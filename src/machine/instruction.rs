@@ -181,10 +181,9 @@ impl Machine {
             .memory
             .range_mut(self.i_register..self.i_register + line_count as Address)?;
 
-        self.screen.draw_sprite(x, y, sprite);
-        self.i_register += line_count as Address;
-        self.ip_register &= 0xfff;
-        Ok(TickFlow::Advance)
+        let collision_found = self.screen.draw_sprite(x, y, sprite);
+        *self.register_mut(0xf) = u8::from(collision_found);
+        Ok(TickFlow::Yield)
     }
 
     /// EX9E: Skip the following instruction if the key corresponding to the hex value currently stored in register VX is pressed
