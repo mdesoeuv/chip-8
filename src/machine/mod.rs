@@ -112,7 +112,7 @@ impl Instruction {
             [8, x, y, 6] => ShiftRight(x, y),
             [8, x, y, 7] => SubRegisterReverse(x, y),
             [8, x, y, 0xe] => ShiftLeft(x, y),
-            [9, x, y, 0] => SkipEq(x, y),
+            [9, x, y, 0] => SkipNeq(x, y),
             [0xa, a, b, c] => StoreAddr(u16_from_nibbles(a, b, c)),
             [0xb, a, b, c] => JumpToOffset(u16_from_nibbles(a, b, c)),
             [0xc, x, a, b] => StoreRandom(x, u8_from_nibbles(a, b)),
@@ -192,15 +192,50 @@ impl Machine {
 
     /// Run current instruction without updating [Machine::ip_register]
     pub fn tick(&mut self) -> TickResult {
-        let nibbles = self.memory.nibbles_at(self.i_register)?;
+        let nibbles = self.memory.nibbles_at(self.ip_register)?;
         let instruction = Instruction::decode(nibbles).ok_or(TickError::Unknown)?;
 
         log::trace!("{instruction:?}");
+        self.execute(instruction)
     }
 
     fn execute(&mut self, instruction: Instruction) -> TickResult {
         match instruction {
-            
+            Instruction::ClearScreen => self.clear_screen(),
+            Instruction::ReturnFromSubroutine => self.return_from_subroutine(),
+            Instruction::JumpToMachineCode(address) => self.jump_to_machine_code(address),
+            Instruction::JumpTo(address) => self.jump_to(address),
+            Instruction::ExecuteSubroutine(address) => self.execute_subroutine(address),
+            Instruction::SkipEqTo(x, y) => self.skip_eq_to(x, y),
+            Instruction::SkipNeqTo(x, y) => self.skip_neq_to(x, y),
+            Instruction::SkipEq(x, y) => self.skip_eq(x, y),
+            Instruction::StoreValue(x, value) => self.store_value(x, value),
+            Instruction::AddValue(x, value) => self.add_value(x, value),
+            Instruction::StoreRegister(x, y) => self.store_register(x, y),
+            Instruction::Or(x, y) => self.or(x, y),
+            Instruction::And(x, y) => self.and(x, y),
+            Instruction::Xor(x, y) => self.xor(x, y),
+            Instruction::AddRegister(x, y) => self.add_register(x, y),
+            Instruction::SubRegister(x, y) => self.sub_register(x, y),
+            Instruction::ShiftRight(x, y) => self.shift_right(x, y),
+            Instruction::SubRegisterReverse(x, y) => self.sub_register_reverse(x, y),
+            Instruction::ShiftLeft(x, y) => self.shift_left(x, y),
+            Instruction::SkipNeq(x, y) => self.skip_neq(x, y),
+            Instruction::StoreAddr(address) => self.store_addr(address),
+            Instruction::JumpToOffset(reference) => self.jump_to_offset(reference),
+            Instruction::StoreRandom(x, mask) => self.store_random(x, mask),
+            Instruction::DrawSprite(x, y, line_count) => self.draw_sprite(x, y, line_count),
+            Instruction::SkipIfKeyPressed(x) => self.skip_if_key_pressed(x),
+            Instruction::SkipIfKeyNotPressed(x) => self.skip_if_key_not_pressed(x),
+            Instruction::StoreDelayTimer(x) => self.store_delay_timer(x),
+            Instruction::WaitForKeypress(x) => self.wait_for_keypress(x),
+            Instruction::SetDelayTimer(x) => self.set_delay_timer(x),
+            Instruction::SetSoundTimer(x) => self.set_sound_timer(x),
+            Instruction::AddToI(x) => self.add_to_i(x),
+            Instruction::StoreDigitLocation(x) => self.store_digit_location(x),
+            Instruction::StoreBinaryCoded(x) => self.store_binary_coded(x),
+            Instruction::StoreRegisters(x) => self.store_registers(x),
+            Instruction::LoadRegisters(x) => self.load_registers(x),
         }
     }
 }
