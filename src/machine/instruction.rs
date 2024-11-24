@@ -183,7 +183,7 @@ impl Machine {
 
         let collision_found = self.screen.draw_sprite(x, y, sprite);
         *self.register_mut(0xf) = u8::from(collision_found);
-        Ok(TickFlow::Yield)
+        Ok(TickFlow::Advance)
     }
 
     /// EX9E: Skip the following instruction if the key corresponding to the hex value currently stored in register VX is pressed

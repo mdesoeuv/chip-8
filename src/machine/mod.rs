@@ -30,7 +30,6 @@ pub enum TickFlow {
     Skip,
     GoTo(Address),
     Wait,
-    Yield,
 }
 
 #[derive(Error, Debug)]
@@ -166,16 +165,12 @@ impl Machine {
     }
 
     pub fn run(&mut self) -> RunResult {
-        for _ in 0..20 {
+        for _ in 0..60 {
             match self.tick()? {
                 TickFlow::Advance => self.ip_register += INSTRUCTION_SIZE,
                 TickFlow::Skip => self.ip_register += INSTRUCTION_SIZE * 2,
                 TickFlow::GoTo(addr) => self.ip_register = addr,
                 TickFlow::Wait => return Ok(RunFlow::Wait),
-                TickFlow::Yield => {
-                    self.ip_register += INSTRUCTION_SIZE;
-                    return Ok(RunFlow::Wait);
-                }
             }
         }
         Ok(RunFlow::Wait)
