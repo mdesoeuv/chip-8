@@ -1,7 +1,7 @@
 mod machine;
 
 use clap::Parser;
-use iced::keyboard::{key, Key};
+use iced::keyboard::Key;
 use machine::{Machine, Screen};
 use std::path::PathBuf;
 

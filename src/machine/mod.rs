@@ -1,15 +1,15 @@
 mod call_stack;
 mod instruction;
+mod keypad;
 mod memory;
 mod screen;
-mod keypad;
 
 use thiserror::Error;
 
 use call_stack::CallStack;
+pub use keypad::{Key, Keypad};
 pub use memory::{Address, Memory};
 pub use screen::Screen;
-pub use keypad::{Keypad, Key};
 
 pub struct Machine {
     pub registers: [u8; 16],
@@ -48,6 +48,89 @@ pub type RunResult = Result<RunFlow, TickError>;
 
 pub enum RunFlow {
     Wait,
+}
+
+#[derive(Debug)]
+enum Instruction {
+    ClearScreen,
+    ReturnFromSubroutine,
+    JumpToMachineCode(Address),
+    JumpTo(Address),
+    ExecuteSubroutine(Address),
+    SkipEqTo(Register, u8),
+    SkipNeqTo(Register, u8),
+    SkipEq(Register, Register),
+    StoreValue(Register, u8),
+    AddValue(Register, u8),
+    StoreRegister(Register, Register),
+    Or(Register, Register),
+    And(Register, Register),
+    Xor(Register, Register),
+    AddRegister(Register, Register),
+    SubRegister(Register, Register),
+    ShiftRight(Register, Register),
+    SubRegisterReverse(Register, Register),
+    ShiftLeft(Register, Register),
+    SkipNeq(Register, Register),
+    StoreAddr(Address),
+    JumpToOffset(Address),
+    StoreRandom(Register, u8),
+    DrawSprite(Register, Register, u8),
+    SkipIfKeyPressed(Register),
+    SkipIfKeyNotPressed(Register),
+    StoreDelayTimer(Register),
+    WaitForKeypress(Register),
+    SetDelayTimer(Register),
+    SetSoundTimer(Register),
+    AddToI(Register),
+    StoreDigitLocation(Register),
+    StoreBinaryCoded(Register),
+    StoreRegisters(Register),
+    LoadRegisters(Register),
+}
+
+impl Instruction {
+    fn decode(nibbles: [u8; 4]) -> Option<Self> {
+        use Instruction::*;
+        Some(match nibbles {
+            [0, 0, 0xe, 0] => ClearScreen,
+            [0, 0, 0xe, 0xe] => ReturnFromSubroutine,
+            [0, a, b, c] => JumpToMachineCode(u16_from_nibbles(a, b, c)),
+            [1, a, b, c] => JumpTo(u16_from_nibbles(a, b, c)),
+            [2, a, b, c] => ExecuteSubroutine(u16_from_nibbles(a, b, c)),
+            [3, x, a, b] => SkipEqTo(x, u8_from_nibbles(a, b)),
+            [4, x, a, b] => SkipNeqTo(x, u8_from_nibbles(a, b)),
+            [5, x, y, 0] => SkipEq(x, y),
+            [6, x, a, b] => StoreValue(x, u8_from_nibbles(a, b)),
+            [7, x, a, b] => AddValue(x, u8_from_nibbles(a, b)),
+            [8, x, y, 0] => StoreRegister(x, y),
+            [8, x, y, 1] => Or(x, y),
+            [8, x, y, 2] => And(x, y),
+            [8, x, y, 3] => Xor(x, y),
+            [8, x, y, 4] => AddRegister(x, y),
+            [8, x, y, 5] => SubRegister(x, y),
+            [8, x, y, 6] => ShiftRight(x, y),
+            [8, x, y, 7] => SubRegisterReverse(x, y),
+            [8, x, y, 0xe] => ShiftLeft(x, y),
+            [9, x, y, 0] => SkipEq(x, y),
+            [0xa, a, b, c] => StoreAddr(u16_from_nibbles(a, b, c)),
+            [0xb, a, b, c] => JumpToOffset(u16_from_nibbles(a, b, c)),
+            [0xc, x, a, b] => StoreRandom(x, u8_from_nibbles(a, b)),
+            [0xd, x, y, a] => DrawSprite(x, y, a),
+            [0xe, x, 9, 0xe] => SkipIfKeyPressed(x),
+            [0xe, x, 0xa, 1] => SkipIfKeyNotPressed(x),
+            [0xf, x, 0, 7] => StoreDelayTimer(x),
+            [0xf, x, 0, 0xa] => WaitForKeypress(x),
+            [0xf, x, 1, 5] => SetDelayTimer(x),
+            [0xf, x, 1, 8] => SetSoundTimer(x),
+            [0xf, x, 1, 0xe] => AddToI(x),
+            [0xf, x, 2, 9] => StoreDigitLocation(x),
+            [0xf, x, 3, 3] => StoreBinaryCoded(x),
+            [0xf, x, 5, 5] => StoreRegisters(x),
+            [0xf, x, 6, 5] => LoadRegisters(x),
+            _ => return None,
+        })
+    }
 }
 
 pub type Register = u8;
@@ -109,43 +192,15 @@ impl Machine {
 
     /// Run current instruction without updating [Machine::ip_register]
     pub fn tick(&mut self) -> TickResult {
-        match self.memory.nibbles_at(self.ip_register)? {
-            [0, 0, 0xe, 0] => self.clear_screen(),
-            [0, 0, 0xe, 0xe] => self.return_from_subroutine(),
-            [0, a, b, c] => self.jump_to_machine_code(u16_from_nibbles(a, b, c)),
-            [1, a, b, c] => self.jump_to(u16_from_nibbles(a, b, c)),
-            [2, a, b, c] => self.execute_subroutine(u16_from_nibbles(a, b, c)),
-            [3, x, a, b] => self.skip_eq_to(x, u8_from_nibbles(a, b)),
-            [4, x, a, b] => self.skip_neq_to(x, u8_from_nibbles(a, b)),
-            [5, x, y, 0] => self.skip_eq(x, y),
-            [6, x, a, b] => self.store_value(x, u8_from_nibbles(a, b)),
-            [7, x, a, b] => self.add_value(x, u8_from_nibbles(a, b)),
-            [8, x, y, 0] => self.store_register(x, y),
-            [8, x, y, 1] => self.or(x, y),
-            [8, x, y, 2] => self.and(x, y),
-            [8, x, y, 3] => self.xor(x, y),
-            [8, x, y, 4] => self.add_register(x, y),
-            [8, x, y, 5] => self.sub_register(x, y),
-            [8, x, y, 6] => self.shift_right(x, y),
-            [8, x, y, 7] => self.sub_register_reverse(x, y),
-            [8, x, y, 0xe] => self.shift_left(x, y),
-            [9, x, y, 0] => self.skip_neq(x, y),
-            [0xa, a, b, c] => self.store_addr(u16_from_nibbles(a, b, c)),
-            [0xb, a, b, c] => self.jump_to_offset(u16_from_nibbles(a, b, c)),
-            [0xc, x, a, b] => self.store_random(x, u8_from_nibbles(a, b)),
-            [0xd, x, y, a] => self.draw_sprite(x, y, a),
-            [0xe, x, 9, 0xe] => self.skip_if_key_pressed(x),
-            [0xe, x, 0xa, 1] => self.skip_if_key_not_pressed(x),
-            [0xf, x, 0, 7] => self.store_delay_timer(x),
-            [0xf, x, 0, 0xa] => self.wait_for_keypress(x),
-            [0xf, x, 1, 5] => self.set_delay_timer(x),
-            [0xf, x, 1, 8] => self.set_sound_timer(x),
-            [0xf, x, 1, 0xe] => self.add_to_i(x),
-            [0xf, x, 2, 9] => self.store_digit_location(x),
-            [0xf, x, 3, 3] => self.store_binary_coded(x),
-            [0xf, x, 5, 5] => self.store_registers(x),
-            [0xf, x, 6, 5] => self.load_registers(x),
-            _ => Err(TickError::Unknown),
+        let nibbles = self.memory.nibbles_at(self.i_register)?;
+        let instruction = Instruction::decode(nibbles).ok_or(TickError::Unknown)?;
+
+        log::trace!("{instruction:?}");
+    }
+
+    fn execute(&mut self, instruction: Instruction) -> TickResult {
+        match instruction {
+            
         }
     }
 }
