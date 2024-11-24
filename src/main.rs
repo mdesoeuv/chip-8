@@ -18,6 +18,7 @@ struct App {
     machine: Machine,
     _stream: OutputStream,
     audio_sink: Sink,
+    last_draw: Option<std::time::Instant>,
 }
 
 #[derive(Debug)]
@@ -57,19 +58,32 @@ fn keymap(keyname: &str) -> Option<machine::Key> {
 impl App {
     fn update(&mut self, message: Message) {
         match message {
-            Message::Render(_) => {
+            Message::Render(last_draw) => {
+                // Frame rate log
+                if let Some(t) = self.last_draw  {
+                    let delay = last_draw - t;
+                    log::debug!("frame_rate: {}", 1.0 / delay.as_secs_f32());
+                }
+                self.last_draw = Some(last_draw);
+
+                // Update clocks
                 self.machine.delay_timer = self.machine.delay_timer.saturating_sub(1);
                 self.machine.sound_timer = self.machine.sound_timer.saturating_sub(1);
 
+                // Manage Audio
                 if self.machine.sound_timer > 0 {
                     self.audio_sink.play();
                 } else {
                     self.audio_sink.pause();
                 }
+
+                // Run code
                 match self.machine.run() {
                     Ok(_) => {}
                     Err(error) => panic!("{error}"),
                 }
+
+                // Reset keypad
                 self.machine.keypad.reset();
             }
             Message::KeyPressed(key) => self.machine.keypad.press(key),
@@ -132,7 +146,7 @@ fn main() -> Result<(), Box<dyn core::error::Error>> {
         .centered()
         .window_size(WINDOW_SIZE)
         .subscription(App::subscription)
-        .run_with(|| (App { machine, _stream, audio_sink }, iced::Task::none()))?;
+        .run_with(|| (App { machine, _stream, audio_sink, last_draw: None }, iced::Task::none()))?;
 
     Ok(())
 }
