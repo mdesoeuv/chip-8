@@ -41,6 +41,7 @@ Here our crate name is `chip_8` and **not** `chip-8`, which means we need to run
 
 ```bash
 $ RUST_LOG="chip_8=debug" cargo run
+$ RUST_LOG=chip_8::machine,chip_8::machine::screen=off cargo run -r -- programs/7-beep.ch8 --debug
 ```
 
 ### References

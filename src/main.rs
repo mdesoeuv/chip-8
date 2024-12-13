@@ -2,30 +2,54 @@ mod machine;
 
 use clap::Parser;
 use iced::keyboard::Key;
-use machine::{Machine, Screen};
+use machine::{instruction, Machine, Screen};
 use std::path::PathBuf;
 
-use rodio::{OutputStream, Sink};
 use rodio::source::{SineWave, Source};
-
+use rodio::{OutputStream, Sink};
 
 #[derive(Parser)]
 struct CLA {
     program: PathBuf,
+    #[arg(short, long)]
+    debug: bool,
 }
 
 struct App {
+    pub debugging: bool,
     machine: Machine,
     _stream: OutputStream,
     audio_sink: Sink,
     last_draw: Option<std::time::Instant>,
 }
 
+impl App {
+    fn new(machine: Machine) -> Self {
+        // _stream must live as long as the sink
+        let (_stream, stream_handle) = OutputStream::try_default().unwrap();
+        let audio_sink = Sink::try_new(&stream_handle).unwrap();
+
+        // Add a dummy source of the sake of the example.
+        let source = SineWave::new(440.0).amplify(0.20);
+        audio_sink.append(source);
+        audio_sink.pause();
+
+        App {
+            debugging: false,
+            machine,
+            _stream,
+            audio_sink,
+            last_draw: None,
+        }
+    }
+}
+
 #[derive(Debug)]
 enum Message {
     Render(iced::time::Instant),
-    KeyPressed(machine::Key),
-    KeyReleased(machine::Key),
+    KeyPadPressed(machine::Key),
+    KeyPadReleased(machine::Key),
+    DebuggerStep,
 }
 
 const WINDOW_SIZE: iced::Size = iced::Size {
@@ -60,7 +84,7 @@ impl App {
         match message {
             Message::Render(last_draw) => {
                 // Frame rate log
-                if let Some(t) = self.last_draw  {
+                if let Some(t) = self.last_draw {
                     let delay = last_draw - t;
                     log::debug!("frame_rate: {}", 1.0 / delay.as_secs_f32());
                 }
@@ -78,16 +102,24 @@ impl App {
                 }
 
                 // Run code
-                match self.machine.run() {
-                    Ok(_) => {}
-                    Err(error) => panic!("{error}"),
+                if !self.debugging {
+                    match self.machine.run() {
+                        Ok(_) => {}
+                        Err(error) => panic!("{error}"),
+                    }
                 }
 
                 // Reset keypad
                 self.machine.keypad.reset();
             }
-            Message::KeyPressed(key) => self.machine.keypad.press(key),
-            Message::KeyReleased(key) => self.machine.keypad.release(key),
+            Message::KeyPadPressed(key) => self.machine.keypad.press(key),
+            Message::KeyPadReleased(key) => self.machine.keypad.release(key),
+            Message::DebuggerStep => {
+                match self.machine.step() {
+                    Ok(_) => {}
+                    Err(error) => panic!("{error}"),
+                }
+            },
         }
     }
 
@@ -96,9 +128,7 @@ impl App {
         //     .width(iced::Length::Fixed(WINDOW_SIZE.width))
         //     .height(iced::Length::Fixed(WINDOW_SIZE.height))
         //     .into()
-        iced::Element::new(
-            &self.machine.screen
-        )
+        iced::Element::new(&self.machine.screen)
     }
 
     fn subscription(&self) -> iced::Subscription<Message> {
@@ -107,46 +137,57 @@ impl App {
         let frames = iced::window::frames().map(Message::Render);
 
         let key_pressed = iced::keyboard::on_key_press(|key, _modifier| match key {
-            Key::Character(c) => Some(Message::KeyPressed(keymap(c.as_str())?)),
+            Key::Character(c) => Some(Message::KeyPadPressed(keymap(c.as_str())?)),
             _ => None,
         });
 
         let key_release = iced::keyboard::on_key_release(|key, _modifier| match key {
-            Key::Character(c) => Some(Message::KeyReleased(keymap(c.as_str())?)),
+            Key::Character(c) => Some(Message::KeyPadReleased(keymap(c.as_str())?)),
             _ => None,
         });
 
-        iced::Subscription::batch([key_pressed, key_release, frames])
+        let debugger_step = iced::keyboard::on_key_press(|key, _modifier| {
+            match key {
+                Key::Named(iced::keyboard::key::Named::Enter) => Some(Message::DebuggerStep),
+                _ => None,
+            }
+        });
+
+        iced::Subscription::batch([
+            key_pressed,
+            key_release,
+            frames,
+            debugger_step,
+        ])
     }
 }
-
-const FRAME_RATE: u32 = 60;
 
 fn main() -> Result<(), Box<dyn core::error::Error>> {
     env_logger::init();
 
-    // _stream must live as long as the sink
-    let (_stream, stream_handle) = OutputStream::try_default().unwrap();
-    let audio_sink = Sink::try_new(&stream_handle).unwrap();
-
-    // Add a dummy source of the sake of the example.
-    let source = SineWave::new(440.0).amplify(0.20);
-    audio_sink.append(source);
-    audio_sink.pause();
 
     let args = CLA::parse();
 
     let bytecode = std::fs::read(&args.program)?;
 
     let mut machine = Machine::new();
+
     machine.load_program(&bytecode)?;
 
+    let mut app = App::new(machine);
+
+    app.debugging = args.debug;
 
     iced::application("chip-8", App::update, App::view)
         .centered()
         .window_size(WINDOW_SIZE)
         .subscription(App::subscription)
-        .run_with(|| (App { machine, _stream, audio_sink, last_draw: None }, iced::Task::none()))?;
+        .run_with(|| {
+            (
+                app,
+                iced::Task::none(),
+            )
+        })?;
 
     Ok(())
 }
