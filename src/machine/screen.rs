@@ -43,54 +43,9 @@ impl Screen {
 
 use iced::{
     advanced::{graphics::core::event, layout, mouse, renderer, widget, Layout, Widget},
-    widget::canvas,
     window::RedrawRequest,
     Background, Color, Length, Rectangle, Shadow, Size,
 };
-
-impl canvas::Program<crate::Message> for &Screen {
-    type State = ();
-
-    fn draw(
-        &self,
-        _state: &Self::State,
-        renderer: &iced::Renderer,
-        _theme: &iced::Theme,
-        bounds: Rectangle,
-        _cursor: iced::mouse::Cursor,
-    ) -> Vec<canvas::Geometry<iced::Renderer>> {
-        // We prepare a new `Frame`
-        let mut frame = canvas::Frame::new(renderer, bounds.size());
-
-        frame.fill(
-            &canvas::Path::rectangle(iced::Point::ORIGIN, bounds.size()),
-            Color::BLACK,
-        );
-
-        for (y, line) in self.pixels.iter().enumerate() {
-            for (x, &pixel) in line.iter().enumerate() {
-                if pixel {
-                    frame.fill(
-                        &canvas::Path::rectangle(
-                            iced::Point {
-                                x: x as f32 * Screen::SCALE,
-                                y: y as f32 * Screen::SCALE,
-                            },
-                            Size {
-                                width: Screen::SCALE,
-                                height: Screen::SCALE,
-                            },
-                        ),
-                        Color::WHITE,
-                    );
-                }
-            }
-        }
-
-        // Then, we produce the geometry
-        vec![frame.into_geometry()]
-    }
-}
 
 impl<M, T, R> Widget<M, T, R> for &Screen
 where

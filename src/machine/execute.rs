@@ -54,8 +54,8 @@ impl Machine {
     }
 
     /// 0NNN: Execute machine language subroutine at address NNN
-    pub fn jump_to_machine_code(&mut self, _addr: Address) -> TickResult {
-        Err(TickError::Unimplemented)
+    pub fn jump_to_machine_code(&mut self, addr: Address) -> TickResult {
+        Err(TickError::Unimplemented(format!("Cannot jump to machine code at {addr:#x}")))
     }
 
     /// 6XNN: Store number NN in register VX

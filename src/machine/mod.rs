@@ -40,8 +40,8 @@ pub enum TickError {
     StackError(#[from] call_stack::Error),
     #[error(transparent)]
     MemoryError(#[from] memory::Error),
-    #[error("unimplemented instruction")]
-    Unimplemented,
+    #[error("unimplemented instruction: {0}")]
+    Unimplemented(String),
     #[error("unknown instruction")]
     Unknown,
 }
