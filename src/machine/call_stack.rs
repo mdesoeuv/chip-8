@@ -7,7 +7,6 @@ pub struct CallStack {
     top: usize,
 }
 
-
 #[derive(Error, Debug)]
 pub enum Error {
     #[error("overflow")]

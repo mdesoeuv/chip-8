@@ -1,8 +1,10 @@
 {
   description = "CHIP-8 emulator";
 
+  inputs.treefmt.url = "github:numtide/treefmt-nix";
+
   outputs =
-    { nixpkgs, ... }:
+    { nixpkgs, treefmt, ... }:
     let
       # Supported target
       system = "x86_64-linux";
@@ -37,10 +39,32 @@
         alsa-lib
       ];
 
+      # Contains every formatter config
+      treefmt-module = {
+        programs = {
+          # Code
+          nixfmt.enable = true; # Nix
+          rustfmt.enable = true; # Rust
+
+          # Docs
+          mdformat.enable = true; # Markdown
+
+          # Configs
+          yamlfmt.enable = true; # YAML
+          toml-sort.enable = true; # TOML
+        };
+
+        # Exclude chip-8 roms
+        settings.global.excludes = [ "*.ch8" ];
+      };
+
+      # Evaluate module into a config
+      treefmt-config = (treefmt.lib.evalModule pkgs treefmt-module).config;
+
     in
     {
-      # Formatter
-      formatter.${system} = pkgs.nixfmt-rfc-style;
+      # Formatter wrapping all formatters
+      formatter.${system} = treefmt-config.build.wrapper;
 
       # Devellopement shell accessible with `nix develop`
       devShells.${system}.default = pkgs.mkShell {

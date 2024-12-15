@@ -4,7 +4,6 @@ Simple Chip-8 emulator written in Rust
 
 ### Usage
 
-
 #### Build Project
 
 ```shell
@@ -22,6 +21,7 @@ or build and run release at the same time : `cargo run -r`
 ### Log
 
 Run the executable with the environment variable `RUST_LOG` set to a log level among:
+
 - trace
 - debug
 - info
@@ -48,4 +48,4 @@ $ RUST_LOG=chip_8::machine,chip_8::machine::screen=off cargo run -r -- programs/
 
 - https://github.com/mattmikolay/chip-8/wiki/Mastering-CHIP%E2%80%908
 - instruction set : https://github.com/mattmikolay/chip-8/wiki/CHIP%E2%80%908-Instruction-Set
-- technical reference : https://github.com/mattmikolay/chip-8/wiki/CHIP%E2%80%908-Technical-Reference 
+- technical reference : https://github.com/mattmikolay/chip-8/wiki/CHIP%E2%80%908-Technical-Reference

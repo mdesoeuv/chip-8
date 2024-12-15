@@ -22,7 +22,10 @@ impl Screen {
 
     // TODO: Should wrap around the screen
     pub fn draw_sprite(&mut self, x: usize, y: usize, sprite: &[u8]) -> bool {
-        log::trace!("draw_sprite: x: {x} y: {y}, sprite: {:x}", sprite.as_ptr() as usize);
+        log::trace!(
+            "draw_sprite: x: {x} y: {y}, sprite: {:x}",
+            sprite.as_ptr() as usize
+        );
         let mut colision_found = false;
         for (line, &sprite_line) in sprite.iter().enumerate() {
             let Some(screen_line) = self.pixels.get_mut(y + line) else {

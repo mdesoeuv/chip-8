@@ -49,7 +49,6 @@ impl Keypad {
             .map(|index| index as Key)
     }
 
-    
     pub fn just_released(&self) -> Option<Key> {
         self.just_released
             .iter()

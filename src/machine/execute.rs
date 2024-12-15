@@ -55,7 +55,9 @@ impl Machine {
 
     /// 0NNN: Execute machine language subroutine at address NNN
     pub fn jump_to_machine_code(&mut self, addr: Address) -> TickResult {
-        Err(TickError::Unimplemented(format!("Cannot jump to machine code at {addr:#x}")))
+        Err(TickError::Unimplemented(format!(
+            "Cannot jump to machine code at {addr:#x}"
+        )))
     }
 
     /// 6XNN: Store number NN in register VX
@@ -256,12 +258,8 @@ impl Machine {
         let n = self.register(x);
 
         *self.memory.get_mut(self.i_register)? = n / 100;
-        *self
-            .memory
-            .get_mut(self.i_register + 1)? = (n / 10) % 10;
-        *self
-            .memory
-            .get_mut(self.i_register + 2)? = n % 10;
+        *self.memory.get_mut(self.i_register + 1)? = (n / 10) % 10;
+        *self.memory.get_mut(self.i_register + 2)? = n % 10;
 
         Ok(TickFlow::Advance)
     }
@@ -270,9 +268,7 @@ impl Machine {
     /// I is set to I + X + 1 after operation
     pub fn store_registers(&mut self, x: Register) -> TickResult {
         for i in 0..=x {
-            *self
-                .memory
-                .get_mut(self.i_register + i as Address)? = self.register(i);
+            *self.memory.get_mut(self.i_register + i as Address)? = self.register(i);
             // self.i_register += 1;
         }
         Ok(TickFlow::Advance)
