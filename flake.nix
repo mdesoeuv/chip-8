@@ -1,10 +1,16 @@
 {
   description = "CHIP-8 emulator";
 
-  inputs.treefmt.url = "github:numtide/treefmt-nix";
+  inputs = {
+    # Formatter for entire projects
+    treefmt.url = "github:numtide/treefmt-nix";
+
+    # Nix packaging for rust's cargo projects
+    crane.url = "github:ipetkov/crane";
+  };
 
   outputs =
-    { nixpkgs, treefmt, ... }:
+    { nixpkgs, treefmt, crane, ... }:
     let
       # Supported target
       system = "x86_64-linux";
@@ -21,6 +27,9 @@
         mold
         # It requires the presence of clang to work
         clang
+
+        # Package wrapper
+        makeWrapper
       ];
 
       # Libraries
@@ -38,6 +47,35 @@
         # Audio
         alsa-lib
       ];
+
+      # Create rust build tools
+      craneLib = crane.mkLib pkgs;
+
+      # Filter project for sources
+      src = craneLib.cleanCargoSource ./.;
+
+      # Inputs for craneLib.build
+      craneBuildInputs = {
+        inherit src;
+        inherit buildInputs;
+        inherit nativeBuildInputs;
+
+        inherit LD_LIBRARY_PATH;
+        inherit ALSA_PLUGIN_DIR;
+      };
+
+      # Cache-build dependencies
+      craneLibArtifacts = craneLib.buildDepsOnly craneBuildInputs;
+
+      # Chip-8 package without wrapping
+      chip-8 = craneLib.buildPackage (craneBuildInputs // {
+        inherit craneLibArtifacts;
+        postInstall = ''
+            wrapProgram $out/bin/chip-8 \
+            	--set ALSA_PLUGIN_DIR ${pkgs.alsa-plugins}/lib/alsa-lib \
+            	--suffix LD_LIBRARY_PATH : ${pkgs.lib.makeLibraryPath buildInputs}
+        '';
+      });
 
       # Contains every formatter config
       treefmt-module = {
@@ -61,24 +99,33 @@
       # Evaluate module into a config
       treefmt-config = (treefmt.lib.evalModule pkgs treefmt-module).config;
 
+      # Dynamic libraries to loading path
+      LD_LIBRARY_PATH = "${pkgs.lib.makeLibraryPath buildInputs}";
+
+      # Support to various higher level audio systems (pulseaudio, jack, ...)
+      ALSA_PLUGIN_DIR = "${pkgs.alsa-plugins}/lib/alsa-lib";
+
     in
     {
       # Formatter wrapping all formatters
       formatter.${system} = treefmt-config.build.wrapper;
 
       # Devellopement shell accessible with `nix develop`
-      devShells.${system}.default = pkgs.mkShell {
+      devShells.${system}.default = craneLib.devShell {
         name = "chip-8";
 
+        # Build tools
         inherit nativeBuildInputs;
 
+        # Dependencies 
         inherit buildInputs;
 
-        # Add dynamic libraries to loading path
-        LD_LIBRARY_PATH = "${pkgs.lib.makeLibraryPath buildInputs}";
-
-        # Add support to various higher level audio systems (pulseaudio, jack, ...)
-        ALSA_PLUGIN_DIR = "${pkgs.alsa-plugins}/lib/alsa-lib";
+        # Execution environment variables
+        inherit LD_LIBRARY_PATH;
+        inherit ALSA_PLUGIN_DIR;
       };
+
+      # Packaged chip-8
+      packages.${system}.default = chip-8;
     };
 }

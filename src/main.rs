@@ -153,7 +153,7 @@ impl App {
     }
 }
 
-fn main() -> Result<(), Box<dyn core::error::Error>> {
+fn main() -> Result<(), Box<dyn std::error::Error>> {
     env_logger::init();
 
     let args = CLA::parse();
