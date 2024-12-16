@@ -44,6 +44,30 @@ $ RUST_LOG="chip_8=debug" cargo run
 $ RUST_LOG=chip_8::machine,chip_8::machine::screen=off cargo run -r -- programs/7-beep.ch8 --debug
 ```
 
+### Nix
+
+On linux x86-64 this project provides a nix flake which provides the following:
+
+```bash
+# Enter development environment
+$ nix develop
+$ cargo run #... Edit, build, run & test project here
+$ exit # Exit the environment shell like any shell
+
+# Format the whole project
+$ nix fmt # Rust, Nix, Markdown, YAML & TOML
+
+# Build the packaged binary (not portable)
+$ nix build
+$ ./result/bin/chip-8 # Result here
+
+# Or build & run it in one go
+$ nix run -- programs/1-chip8-logo
+
+# Or even it without cloning the repository
+$ nix run github:mdesoeuv/chip-8
+```
+
 ### References
 
 - https://github.com/mattmikolay/chip-8/wiki/Mastering-CHIP%E2%80%908
