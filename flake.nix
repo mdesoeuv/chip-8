@@ -125,6 +125,9 @@
         # Execution environment variables
         inherit LD_LIBRARY_PATH;
         inherit ALSA_PLUGIN_DIR;
+
+        # Provide the appropriate LSP server
+        packages = [ pkgs.rust-analyzer ];
       };
 
       # Packaged chip-8
