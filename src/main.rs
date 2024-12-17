@@ -114,11 +114,9 @@ impl App {
             }
             Message::KeyPadPressed(key) => self.machine.keypad.press(key),
             Message::KeyPadReleased(key) => self.machine.keypad.release(key),
-            Message::DebuggerStep => {
-                match self.machine.step() {
-                    Ok(_) => {}
-                    Err(error) => panic!("{error}"),
-                }
+            Message::DebuggerStep => match self.machine.step() {
+                Ok(_) => {}
+                Err(error) => panic!("{error}"),
             },
         }
     }
@@ -146,25 +144,17 @@ impl App {
             _ => None,
         });
 
-        let debugger_step = iced::keyboard::on_key_press(|key, _modifier| {
-            match key {
-                Key::Named(iced::keyboard::key::Named::Enter) => Some(Message::DebuggerStep),
-                _ => None,
-            }
+        let debugger_step = iced::keyboard::on_key_press(|key, _modifier| match key {
+            Key::Named(iced::keyboard::key::Named::Enter) => Some(Message::DebuggerStep),
+            _ => None,
         });
 
-        iced::Subscription::batch([
-            key_pressed,
-            key_release,
-            frames,
-            debugger_step,
-        ])
+        iced::Subscription::batch([key_pressed, key_release, frames, debugger_step])
     }
 }
 
-fn main() -> Result<(), Box<dyn core::error::Error>> {
+fn main() -> Result<(), Box<dyn std::error::Error>> {
     env_logger::init();
-
 
     let args = CLA::parse();
 
@@ -182,12 +172,7 @@ fn main() -> Result<(), Box<dyn core::error::Error>> {
         .centered()
         .window_size(WINDOW_SIZE)
         .subscription(App::subscription)
-        .run_with(|| {
-            (
-                app,
-                iced::Task::none(),
-            )
-        })?;
+        .run_with(|| (app, iced::Task::none()))?;
 
     Ok(())
 }

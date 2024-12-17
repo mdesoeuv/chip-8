@@ -1,17 +1,17 @@
 mod call_stack;
 mod execute;
+pub mod instruction;
 mod keypad;
 mod memory;
 mod screen;
-pub mod instruction;
 
 use thiserror::Error;
 
 use call_stack::CallStack;
+use instruction::Instruction;
 pub use keypad::{Key, Keypad};
 pub use memory::{Address, Memory};
 pub use screen::Screen;
-use instruction::Instruction;
 
 pub struct Machine {
     pub registers: [u8; 16],
@@ -87,7 +87,7 @@ impl Machine {
     pub fn run(&mut self) -> RunResult {
         for _ in 0..60 {
             if let RunFlow::Wait = self.step()? {
-                return Ok(RunFlow::Wait)
+                return Ok(RunFlow::Wait);
             }
         }
         Ok(RunFlow::Continue)
