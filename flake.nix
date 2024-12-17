@@ -57,9 +57,14 @@
       # Inputs for craneLib.build
       craneBuildInputs = {
         inherit src;
-        inherit buildInputs;
+
+        # Build tools
         inherit nativeBuildInputs;
 
+        # Dependencies 
+        inherit buildInputs;
+
+        # Execution environment variables
         inherit LD_LIBRARY_PATH;
         inherit ALSA_PLUGIN_DIR;
       };
@@ -110,15 +115,12 @@
       # Formatter wrapping all formatters
       formatter.${system} = treefmt-config.build.wrapper;
 
-      # Devellopement shell accessible with `nix develop`
+      # Developement shell accessible with `nix develop`
       devShells.${system}.default = craneLib.devShell {
         name = "chip-8";
 
-        # Build tools
-        inherit nativeBuildInputs;
-
-        # Dependencies 
-        inherit buildInputs;
+        # Import build inputs from chip-8
+        inputsFrom = [ chip-8 ];
 
         # Execution environment variables
         inherit LD_LIBRARY_PATH;
